@@ -282,6 +282,26 @@ class Network(object):
             saver.restore(self.session, io.tf_save_path + file_name + '.ckpt')
             print "Loaded network from file " + file_name
 
+    # Input:
+    # The data sample is of the same form as the training/test data and determines the point of the
+    # input data at which we take the derivative d(latent)/d(input1) of the latent neuron with respect to the input variables.
+    # Output:
+    # Array containing a list of derivatives of the latent neuron with respect to all the input variables
+    def get_latent_derivatives(self, data_sample):
+        jvp = tf.gradients(self.mu, self.input)
+        with self.graph.as_default():
+            data_dict = self.gen_data_dict_for_derivative(data_sample)
+            out = self.session.run(jvp, feed_dict=dict(data_dict))
+        return out[0].flatten()
+
+    def gen_data_dict_for_derivative(self, data_sample):
+        # We do not add noise:
+        eps = np.zeros([len(data_sample[0]), self.latent_size])
+        return {self.input: data_sample[0],
+                self.input2: data_sample[1],
+                self.labels: data_sample[2],
+                self.epsilon: eps
+                }
 
 ###########
 # Helpers #
